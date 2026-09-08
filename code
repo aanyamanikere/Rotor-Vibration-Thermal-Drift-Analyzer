@@ -1,0 +1,105 @@
+import pickle
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+
+# Set seed for reproducible synthetic data generation
+np.random.seed(42)
+
+# 1. Generate mock dataset (100 flight logs)
+num_samples = 100
+flight_ids = [f"FLIGHT_{i:03d}" for i in range(1, num_samples + 1)]
+vibration_hz = np.random.uniform(20.0, 120.0, num_samples)
+
+# Generate battery_temp_c with linear correlation to vibration_hz plus noise
+noise = np.random.normal(0, 4.0, num_samples)
+battery_temp_c = 0.4 * vibration_hz + 20 + noise
+battery_temp_c = np.clip(battery_temp_c, 30.0, 75.0)
+
+df = pd.DataFrame(
+    {
+        "flight_id": flight_ids,
+        "vibration_hz": vibration_hz,
+        "battery_temp_c": battery_temp_c,
+    }
+)
+
+# 2. Train Linear Regression Model
+X = df[["vibration_hz"]]  # Features as 2D array
+y = df["battery_temp_c"]  # Target
+
+model = LinearRegression()
+model.fit(X, y)
+
+# Predictions and performance evaluation
+y_pred = model.predict(X)
+coef = model.coef_[0]
+intercept = model.intercept_
+r2 = r2_score(y, y_pred)
+
+# Print metrics to terminal
+print("--- Thermal Drift Model Metrics ---")
+print(f"Coefficient (Slope) : {coef:.4f} °C/Hz")
+print(f"Intercept           : {intercept:.4f} °C")
+print(f"R² Score            : {r2:.4f}\n")
+
+# 3. Identify and filter high-risk flights (Predicted Temp > 65 °C)
+df["predicted_temp_c"] = y_pred
+high_risk_df = df[df["predicted_temp_c"] > 65.0].copy()
+
+print(f"Identified {len(high_risk_df)} high-risk flights (Predicted Temp > 65°C):")
+print(
+    high_risk_df[
+        ["flight_id", "vibration_hz", "battery_temp_c", "predicted_temp_c"]
+    ].head()
+)
+
+# 4. Archive subset to disk using pickle
+output_filename = "flagged_flights.pkl"
+with open(output_filename, "wb") as f:
+    pickle.dump(high_risk_df, f)
+
+print(f"\nSuccessfully archived high-risk logs to '{output_filename}'.")
+
+# 5. Generate and save diagnostic visualization chart
+plt.figure(figsize=(10, 6))
+
+# Scatter plot of raw flight data
+plt.scatter(
+    df["vibration_hz"],
+    df["battery_temp_c"],
+    color="blue",
+    alpha=0.6,
+    label="Flight Telemetry",
+)
+
+# Plot fitted regression line
+plt.plot(
+    df["vibration_hz"],
+    df["predicted_temp_c"],
+    color="green",
+    linewidth=2,
+    label=f"Regression Line (R² = {r2:.2f})",
+)
+
+# Red dashed threshold line at 65°C
+plt.axhline(
+    y=65.0,
+    color="red",
+    linestyle="--",
+    linewidth=1.5,
+    label="Critical Threshold (65°C)",
+)
+
+plt.title("Rotor Vibration vs. Battery Temperature", fontsize=14)
+plt.xlabel("Vibration (Hz)", fontsize=11)
+plt.ylabel("Battery Temperature (°C)", fontsize=11)
+plt.legend()
+plt.grid(True, linestyle=":", alpha=0.6)
+
+# Save chart to disk for README
+plt.savefig("thermal_drift_analysis.png", dpi=300, bbox_inches="tight")
+print("Saved visualization chart to 'thermal_drift_analysis.png'.")
+plt.show()
