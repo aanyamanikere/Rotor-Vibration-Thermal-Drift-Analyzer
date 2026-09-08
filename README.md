@@ -4,7 +4,7 @@ A Python project that uses Machine Learning to model drone battery overheating c
 ![Thermal Drift Analysis](thermal_drift_analysis.png)
 
 ## 📌 Project Overview
-Mechanical rotor vibration in unmanned aerial vehicles (UAVs) transfers kinetic energy into internal components, leading to friction and thermal buildup.Unmonitored thermal drift can accelerate battery degradation or trigger thermal runaway mid-flight.
+Mechanical rotor vibration in unmanned aerial vehicles (UAVs) transfers kinetic energy into internal components, leading to friction and thermal buildup. Unmonitored thermal drift can accelerate battery degradation or trigger thermal runaway mid-flight.
 
 This project uses **Linear Regression** to:
 1. Generate synthetic data for 100 drone flights (`vibration_hz` and `battery_temp_c`).
